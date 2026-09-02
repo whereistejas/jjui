@@ -221,7 +221,7 @@ func (s *Operation) HandleIntent(intent intents.Intent) (tea.Cmd, bool) {
 		}
 		return func() tea.Msg {
 			args := jj.Diff(s.revision.GetChangeId(), jj.FileName{})
-			output, _ := s.context.RunCommandImmediate(jj.Diff(s.revision.GetChangeId(), selected.fileName))
+			output, _ := s.context.RunCommandImmediateWithEnv(jj.Diff(s.revision.GetChangeId(), selected.fileName), s.context.FullViewSizeEnv())
 			return intents.DiffShow{Content: string(output), Args: args}
 		}, true
 	case intents.DetailsSplit:

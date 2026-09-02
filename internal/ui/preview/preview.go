@@ -111,6 +111,10 @@ func (m *Model) Scroll(delta int) tea.Cmd {
 }
 
 func (m *Model) ScrollHorizontal(delta int) tea.Cmd {
+	if m.view.SoftWrap {
+		// Nothing extends past the right edge, so there is nowhere to scroll.
+		return nil
+	}
 	if delta > 0 {
 		m.view.ScrollRight(delta)
 	} else if delta < 0 {
@@ -230,14 +234,7 @@ func (m *Model) refreshPreviewForItem(item common.SelectedItem) tea.Cmd {
 			})
 		}
 
-		env := []string{
-			// The preview subprocess does not run in a pane-sized PTY, so let
-			// width-sensitive tools like `jj diff` see the preview size via the
-			// conventional terminal size environment variables.
-			"DFT_WIDTH=" + strconv.Itoa(m.view.Width()), // difftastic
-			"COLUMNS=" + strconv.Itoa(m.view.Width()),
-			"LINES=" + strconv.Itoa(m.view.Height()),
-		}
+		env := context.ViewSizeEnv(m.view.Width(), m.view.Height())
 		if m.contentItem != nil && m.contentItem.Equal(item) {
 			return nil
 		}
@@ -250,7 +247,9 @@ func (m *Model) refreshPreviewForItem(item common.SelectedItem) tea.Cmd {
 }
 
 func New(context *context.MainContext) *Model {
-	return &Model{
+	m := &Model{
 		context: context,
 	}
+	m.view.SoftWrap = config.Current.Preview.Wrap
+	return m
 }

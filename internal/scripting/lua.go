@@ -289,7 +289,10 @@ func registerAPI(L *lua.LState, ctx *uicontext.MainContext) {
 	})
 	jjFn := L.NewFunction(func(L *lua.LState) int {
 		args := argsFromLua(L)
-		out, err := ctx.RunCommandImmediate(args)
+		// Scripts capture this output to render it themselves, typically through
+		// diff.show or ui.preview.show, so width-sensitive tools need to know how
+		// wide the window is rather than falling back to 80 columns.
+		out, err := ctx.RunCommandImmediateWithEnv(args, ctx.FullViewSizeEnv())
 		if err != nil {
 			L.Push(lua.LNil)
 			L.Push(lua.LString(err.Error()))

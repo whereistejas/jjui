@@ -4,11 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/idursun/jjui/internal/config"
 	"github.com/idursun/jjui/internal/jj"
 	"github.com/idursun/jjui/internal/jj/source"
 	"github.com/idursun/jjui/internal/ui/common"
 	"github.com/idursun/jjui/internal/ui/intents"
 	"github.com/idursun/jjui/internal/ui/operations/target_picker"
+	"github.com/idursun/jjui/internal/ui/render"
 	"github.com/idursun/jjui/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -323,4 +325,54 @@ func TestFileNavigateUnavailableWithoutArgs(t *testing.T) {
 	msg, ok := cmd().(intents.AddMessage)
 	require.True(t, ok)
 	assert.Contains(t, msg.Text, "unavailable")
+}
+
+func TestConfiguredWrap_OpensWrappedWithoutToggling(t *testing.T) {
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.Diff.Wrap = true
+
+	model := New("12345678901234567890")
+
+	rendered := test.Stripped(test.RenderImmediate(model, 10, 3))
+	assert.Contains(t, rendered, "1234567890\n1234567890")
+}
+
+func TestConfiguredWrap_CanStillBeToggledOff(t *testing.T) {
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.Diff.Wrap = true
+
+	model := New("abcdefghijklmnopqrst")
+	model.Update(intents.DiffToggleWrap{})
+
+	// Back to a single row that scrolls horizontally instead of folding.
+	rendered := test.Stripped(test.RenderImmediate(model, 10, 2))
+	assert.Equal(t, "abcdefghij", strings.Split(rendered, "\n")[0])
+	assert.NotContains(t, rendered, "klmnopqrst")
+}
+
+// jj's built-in diff formatters (--git, --color-words) never wrap, whatever
+// width they are told about, so the view itself has to guarantee that nothing
+// extends past the right edge.
+func TestConfiguredWrap_UnwrappableFormatterOutputNeverOverflows(t *testing.T) {
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.Diff.Wrap = true
+
+	// Shaped like `jj diff --git` output, including SGR sequences, with a line
+	// far wider than the viewport.
+	content := strings.Join([]string{
+		"\x1b[38;5;3mModified regular file src/main.go:\x1b[39m",
+		"\x1b[38;5;1m   1\x1b[39m \x1b[38;5;1m-\x1b[39m" + strings.Repeat("old ", 80),
+		"\x1b[38;5;2m   1\x1b[39m \x1b[38;5;2m+\x1b[39m" + strings.Repeat("new ", 80),
+	}, "\n")
+
+	const width = 40
+	rendered := test.Stripped(test.RenderImmediate(New(content), width, 30))
+	for i, line := range strings.Split(rendered, "\n") {
+		assert.LessOrEqual(t, render.StringWidth(line), width, "row %d overflows the viewport", i)
+	}
+	// The tail of the long line has to be reachable by scrolling down.
+	assert.Contains(t, rendered, "new")
 }

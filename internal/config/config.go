@@ -23,6 +23,7 @@ type Config struct {
 	UI              UIConfig        `toml:"ui"`
 	Suggest         SuggestConfig   `toml:"suggest"`
 	Revisions       RevisionsConfig `toml:"revisions"`
+	Diff            DiffConfig      `toml:"diff"`
 	Preview         PreviewConfig   `toml:"preview"`
 	OpLog           OpLogConfig     `toml:"oplog"`
 	Limit           int             `toml:"limit"`
@@ -213,15 +214,26 @@ const (
 	PreviewPositionRight
 )
 
+// DiffConfig configures the full-window diff view.
+type DiffConfig struct {
+	// Wrap makes the diff view open in wrapped mode, so long lines are folded
+	// onto the following rows instead of requiring horizontal scrolling.
+	// `diff.toggle_wrap` still switches modes for the current diff.
+	Wrap bool `toml:"wrap"`
+}
+
 type PreviewConfig struct {
-	RevisionCommand          []string `toml:"revision_command"`
-	EvologCommand            []string `toml:"evolog_command"`
-	OplogCommand             []string `toml:"oplog_command"`
-	FileCommand              []string `toml:"file_command"`
-	ShowAtStart              bool     `toml:"show_at_start"`
-	Position                 string   `toml:"position"`
-	WidthPercentage          float64  `toml:"width_percentage"`
-	WidthIncrementPercentage float64  `toml:"width_increment_percentage"`
+	RevisionCommand []string `toml:"revision_command"`
+	EvologCommand   []string `toml:"evolog_command"`
+	OplogCommand    []string `toml:"oplog_command"`
+	FileCommand     []string `toml:"file_command"`
+	// Wrap soft-wraps long lines in the preview pane instead of requiring
+	// horizontal scrolling.
+	Wrap                     bool    `toml:"wrap"`
+	ShowAtStart              bool    `toml:"show_at_start"`
+	Position                 string  `toml:"position"`
+	WidthPercentage          float64 `toml:"width_percentage"`
+	WidthIncrementPercentage float64 `toml:"width_increment_percentage"`
 }
 
 func GetPreviewPosition(c *Config) (PreviewPosition, error) {

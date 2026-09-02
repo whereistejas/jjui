@@ -1,6 +1,7 @@
 package preview
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/idursun/jjui/internal/config"
@@ -209,4 +210,71 @@ func TestSetContent_ResetsTabStopsAfterNewlines(t *testing.T) {
 
 	rendered := test.RenderImmediate(model, 12, 2)
 	assert.Equal(t, "a   b\nab  c", rendered)
+}
+
+func TestConfiguredWrap_FoldsLongLines(t *testing.T) {
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.Preview.Wrap = true
+
+	ctx := test.NewTestContext(test.NewTestCommandRunner(t))
+	model := New(ctx)
+	model.SetContent("12345678901234567890")
+
+	rendered := test.Stripped(test.RenderImmediate(model, 10, 3))
+	assert.Contains(t, rendered, "1234567890\n1234567890")
+}
+
+func TestConfiguredWrap_HorizontalScrollIsNoop(t *testing.T) {
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.Preview.Wrap = true
+
+	ctx := test.NewTestContext(test.NewTestCommandRunner(t))
+	model := New(ctx)
+	model.SetContent("abcdefghijklmnopqrst")
+
+	before := test.Stripped(test.RenderImmediate(model, 10, 2))
+	model.ScrollHorizontal(5)
+	after := test.Stripped(test.RenderImmediate(model, 10, 2))
+	assert.Equal(t, before, after)
+}
+
+func TestWrapDisabled_KeepsHorizontalScrolling(t *testing.T) {
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.Preview.Wrap = false
+
+	ctx := test.NewTestContext(test.NewTestCommandRunner(t))
+	model := New(ctx)
+	model.SetContent("abcdefghijklmnopqrst")
+
+	before := test.Stripped(test.RenderImmediate(model, 10, 2))
+	model.ScrollHorizontal(5)
+	after := test.Stripped(test.RenderImmediate(model, 10, 2))
+	assert.NotEqual(t, before, after)
+}
+
+// Same guarantee as the diff view: `jj show` renders its commit header itself,
+// and neither that header nor a built-in formatter's diff body ever wraps.
+func TestConfiguredWrap_UnwrappableFormatterOutputNeverOverflows(t *testing.T) {
+	previous := config.Current
+	t.Cleanup(func() { config.Current = previous })
+	config.Current.Preview.Wrap = true
+
+	content := strings.Join([]string{
+		"Change ID: kxryzmormtuectlkmyuuxpolyzsmpsnw",
+		"Bookmarks: " + strings.Repeat("some-long-bookmark-name ", 10),
+		"    " + strings.Repeat("a description that runs on and on ", 10),
+	}, "\n")
+
+	const width = 40
+	ctx := test.NewTestContext(test.NewTestCommandRunner(t))
+	model := New(ctx)
+	model.SetContent(content)
+
+	rendered := test.Stripped(test.RenderImmediate(model, width, 40))
+	for i, line := range strings.Split(rendered, "\n") {
+		assert.LessOrEqual(t, render.StringWidth(line), width, "row %d overflows the pane", i)
+	}
 }

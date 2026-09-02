@@ -372,6 +372,8 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		m.context.TerminalWidth = msg.Width
+		m.context.TerminalHeight = msg.Height
 	}
 
 	// Unhandled key messages go to the main view (oplog or revisions)

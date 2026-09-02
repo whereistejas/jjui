@@ -33,6 +33,8 @@ type MainContext struct {
 	JJConfig                  *config.JJConfig
 	DefaultRevset             string
 	CurrentRevset             string
+	TerminalWidth             int
+	TerminalHeight            int
 	TerminalHasDarkBackground bool
 	TerminalThemeDetected     bool
 	TerminalBackground        string
@@ -59,6 +61,13 @@ func NewAppContext(location string, aps *askpass.Server) *MainContext {
 		m.JJConfig, _ = config.DefaultConfig(output)
 	}
 	return m
+}
+
+// FullViewSizeEnv returns ViewSizeEnv for a view that fills the window, such as
+// the diff view: it spans the full terminal width, with the status bar taking
+// one row off the bottom.
+func (ctx *MainContext) FullViewSizeEnv() []string {
+	return ViewSizeEnv(ctx.TerminalWidth, ctx.TerminalHeight-1)
 }
 
 func (ctx *MainContext) ClearCheckedItems(ofType reflect.Type) {

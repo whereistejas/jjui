@@ -6,6 +6,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/idursun/jjui/internal/config"
 	"github.com/idursun/jjui/internal/jj"
 	"github.com/idursun/jjui/internal/jj/source"
 	"github.com/idursun/jjui/internal/ui/actions"
@@ -326,7 +327,9 @@ func (m *Model) clampScroll(width, height int) {
 }
 
 func (m *Model) SetContent(content string) {
-	wrapped := false
+	// A diff that is already on screen keeps whatever mode the user toggled it
+	// into; the first one opens in the configured default.
+	wrapped := config.Current.Diff.Wrap
 	if m.mode != nil {
 		_, wrapped = m.mode.(*wrappedView)
 	}
@@ -450,8 +453,14 @@ func (m *Model) loadFile(file jj.FileName) tea.Cmd {
 	if !file.IsEmpty() {
 		args = append(args, file.Escaped())
 	}
+	// The diff view has already been laid out by the time a file is loaded, so
+	// prefer its measured size over the whole-window estimate.
+	env := appContext.ViewSizeEnv(m.viewportWidth, m.viewportHeight)
+	if env == nil {
+		env = m.context.FullViewSizeEnv()
+	}
 	return func() tea.Msg {
-		output, err := m.context.RunCommandImmediate(args)
+		output, err := m.context.RunCommandImmediateWithEnv(args, env)
 		if err != nil {
 			return fileLoadedMsg{file: file, err: err}
 		}

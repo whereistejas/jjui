@@ -22,7 +22,11 @@ bindings_profile = ":builtin"
   # template = 'builtin_log_compact' # overrides jj's templates.log
   # revset = "zzzzzzz"               # overrides jj's revsets.log
 
+[diff]
+  wrap = false # fold long lines instead of scrolling horizontally
+
 [preview]
+  wrap = false # soft-wrap long lines instead of scrolling horizontally
   revision_command = ["show", "--color", "always", "-r", "$change_id"]
   evolog_command = ["evolog", "--color", "always", "-r", "$commit_id", "-p", "-n", "1"]
   oplog_command = ["op", "show", "$operation_id", "--color", "always"]

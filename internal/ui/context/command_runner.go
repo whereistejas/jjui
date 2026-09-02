@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -31,6 +32,29 @@ type MainCommandRunner struct {
 	Location  string
 	Askpass   *askpass.Server
 	idCounter atomic.Int64
+}
+
+// ViewSizeEnv returns terminal-size environment variables describing a jjui
+// view that is w columns wide and h rows tall.
+//
+// Commands whose output is rendered inside a jjui view do not run in a
+// pane-sized PTY: their stdout is a pipe, so width-sensitive tools fall back to
+// a default width (jj resolves `$width` to 80, difftastic likewise) and lay out
+// their output for the wrong size. Passing the view geometry through the
+// conventional variables lets those tools wrap to the width we will actually
+// render them at.
+//
+// Returns nil for non-positive sizes so callers can pass it straight to
+// RunCommandImmediateWithEnv before the first window size is known.
+func ViewSizeEnv(w, h int) []string {
+	if w <= 0 || h <= 0 {
+		return nil
+	}
+	return []string{
+		"DFT_WIDTH=" + strconv.Itoa(w), // difftastic
+		"COLUMNS=" + strconv.Itoa(w),
+		"LINES=" + strconv.Itoa(h),
+	}
 }
 
 func (a *MainCommandRunner) nextID() int { return int(a.idCounter.Add(1)) }

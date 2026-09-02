@@ -1137,7 +1137,7 @@ func (m *Model) showDiff(intent intents.ShowDiff) tea.Cmd {
 	changeId := commit.GetChangeId()
 	return func() tea.Msg {
 		args := jj.Diff(changeId, jj.FileName{})
-		output, _ := m.context.RunCommandImmediate(args)
+		output, _ := m.context.RunCommandImmediateWithEnv(args, m.context.FullViewSizeEnv())
 		return intents.DiffShow{Content: string(output), Args: args}
 	}
 }
